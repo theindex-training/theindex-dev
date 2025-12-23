@@ -1,0 +1,53 @@
+name: theindex-dev
+
+services:
+  # --- Database (always in docker) ---
+  db:
+    image: postgres:16-alpine
+    profiles: ["db", "api", "front", "full"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - theindex_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # --- API from GHCR (frontend devs use this; backend devs can run Nest locally) ---
+  api:
+    image: ${API_IMAGE}
+    profiles: ["api", "full"]
+    environment:
+      NODE_ENV: development
+      PORT: ${API_PORT}
+      # DB is reachable by service name "db" inside the compose network
+      DATABASE_URL: ${DATABASE_URL}
+      # Optional: allow local Angular dev server origin
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      LOG_LEVEL: ${LOG_LEVEL}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT}:3000"
+    restart: unless-stopped
+
+  # --- Frontend from GHCR (optional: run the built app locally via Docker) ---
+  front:
+    image: ${FRONT_IMAGE}
+    profiles: ["front", "full"]
+    depends_on:
+      - api
+    ports:
+      - "4201:80" # open http://localhost:4201
+    restart: unless-stopped
+
+volumes:
+  theindex_pgdata:
