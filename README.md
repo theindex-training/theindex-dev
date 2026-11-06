@@ -100,3 +100,35 @@ Stop containers:
 Stop and **delete DB data** (⚠️ destructive):
 
 `docker compose -f docker-compose.dev.yml down -v`
+
+----------
+
+## Production (VPS)
+
+`docker-compose.prod.yml` is the production compose file. The VPS runs a copy of it, so when you change one, change the other:
+
+| In this repo | On the VPS |
+|--------------|------------|
+| `docker-compose.prod.yml` | `/opt/theindex/docker-compose.yml` |
+| `media/default.conf` | `/opt/theindex/media/default.conf` |
+| `.env.example` (names only) | `/opt/theindex/.env` (real values, never committed) |
+
+Services: `traefik` (HTTPS, Let's Encrypt), `db`, `api`, `front` and `media` (nginx serving the article images from the `theindex_media` volume, read-only).
+
+Hosts (compose phase A of the public site's cutover, see `docs/decision-record.md` section 11 in `theindex-web`):
+-   `theindex.training` and `app.theindex.training` → `front`, with `/api` → `api`
+-   `media.theindex.training` → `media`
+-   `www.theindex.training` → redirect to `theindex.training`
+
+Things to know before changing it:
+-   Every host needs a DNS `A` record that resolves **before** it appears in a router rule, or Let's Encrypt fails and rate-limits.
+-   Each router has an `-http` twin that redirects to HTTPS; keep its rule's hosts the same as the HTTPS router's.
+-   `media/default.conf` must exist on the VPS before `docker compose up`, or Docker creates an empty folder in its place and `media` doesn't start. Test it with `docker run --rm -v "$PWD/media/default.conf:/etc/nginx/conf.d/default.conf:ro" nginx:alpine nginx -t`.
+-   `media` mounts the volume at `/srv/media`, not nginx's default `/usr/share/nginx/html`: Docker would copy nginx's default pages into the empty volume.
+-   Never print or share `traefik/acme.json`: it holds the certificates' private keys.
+
+Apply a change on the VPS:
+
+```bash
+cd /opt/theindex && docker compose config --quiet && docker compose pull && docker compose up -d
+```
