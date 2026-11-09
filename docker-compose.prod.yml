@@ -86,14 +86,14 @@ services:
       - traefik.enable=true
 
       # HTTPS: /api -> API container
-      - traefik.http.routers.api.rule=(Host(`theindex.training`) || Host(`app.theindex.training`)) && PathPrefix(`/api`)
+      - traefik.http.routers.api.rule=Host(`app.theindex.training`) && PathPrefix(`/api`)
       - traefik.http.routers.api.entrypoints=websecure
       - traefik.http.routers.api.priority=100
       - traefik.http.routers.api.tls.certresolver=le
       - traefik.http.services.api.loadbalancer.server.port=3000
 
       # HTTP: redirect to HTTPS
-      - traefik.http.routers.api-http.rule=(Host(`theindex.training`) || Host(`app.theindex.training`)) && PathPrefix(`/api`)
+      - traefik.http.routers.api-http.rule=Host(`app.theindex.training`) && PathPrefix(`/api`)
       - traefik.http.routers.api-http.entrypoints=web
       - traefik.http.routers.api-http.priority=100
       - traefik.http.routers.api-http.middlewares=redirect-to-https
@@ -108,18 +108,43 @@ services:
     labels:
       - traefik.enable=true
 
-      # HTTPS: site root -> front container
-      - traefik.http.routers.front.rule=(Host(`theindex.training`) || Host(`app.theindex.training`)) && !PathPrefix(`/api`)
+      # HTTPS: the portal (everything but /api) -> front container
+      - traefik.http.routers.front.rule=Host(`app.theindex.training`) && !PathPrefix(`/api`)
       - traefik.http.routers.front.entrypoints=websecure
       - traefik.http.routers.front.priority=10
       - traefik.http.routers.front.tls.certresolver=le
       - traefik.http.services.front.loadbalancer.server.port=80
 
       # HTTP: redirect to HTTPS
-      - traefik.http.routers.front-http.rule=(Host(`theindex.training`) || Host(`app.theindex.training`)) && !PathPrefix(`/api`)
+      - traefik.http.routers.front-http.rule=Host(`app.theindex.training`) && !PathPrefix(`/api`)
       - traefik.http.routers.front-http.entrypoints=web
       - traefik.http.routers.front-http.priority=10
       - traefik.http.routers.front-http.middlewares=redirect-to-https
+
+      - traefik.docker.network=theindex_internal
+    restart: unless-stopped
+    networks:
+      - internal
+
+  web:
+    image: ${WEB_IMAGE}
+    environment:
+      - API_INTERNAL_URL=http://api:3000/api
+      - SITE_URL=https://theindex.training
+      - APP_URL=https://app.theindex.training
+    labels:
+      - traefik.enable=true
+
+      # HTTPS: theindex.training -> public site (Astro server)
+      - traefik.http.routers.web.rule=Host(`theindex.training`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls.certresolver=le
+      - traefik.http.services.web.loadbalancer.server.port=4321
+
+      # HTTP: redirect to HTTPS
+      - traefik.http.routers.web-http.rule=Host(`theindex.training`)
+      - traefik.http.routers.web-http.entrypoints=web
+      - traefik.http.routers.web-http.middlewares=redirect-to-https
 
       - traefik.docker.network=theindex_internal
     restart: unless-stopped
