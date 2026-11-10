@@ -113,10 +113,11 @@ Stop and **delete DB data** (⚠️ destructive):
 | `media/default.conf` | `/opt/theindex/media/default.conf` |
 | `.env.example` (names only) | `/opt/theindex/.env` (real values, never committed) |
 
-Services: `traefik` (HTTPS, Let's Encrypt), `db`, `api`, `front` and `media` (nginx serving the article images from the `theindex_media` volume, read-only).
+Services: `traefik` (HTTPS, Let's Encrypt), `db`, `api`, `front` (the portal), `web` (the public site, `theindex-web`) and `media` (nginx serving the article images from the `theindex_media` volume, read-only).
 
-Hosts (compose phase A of the public site's cutover, see `docs/decision-record.md` section 11 in `theindex-web`):
--   `theindex.training` and `app.theindex.training` → `front`, with `/api` → `api`
+Hosts (compose phase B of the public site's cutover, see `docs/decision-record.md` section 11 in `theindex-web`):
+-   `theindex.training` → `web`
+-   `app.theindex.training` → `front`, with `/api` → `api` (`CORS_ORIGIN=https://app.theindex.training`)
 -   `media.theindex.training` → `media`
 -   `www.theindex.training` → redirect to `theindex.training`
 
