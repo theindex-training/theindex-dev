@@ -69,13 +69,15 @@ You run **DB in Docker**, API locally in watch mode.
 
 ### 2) Run API locally
 
-In the NestJS repository, set:
+In the NestJS repository (`theindex-api`), copy its example settings; their database values (`theindex`/`theindex`, database `theindex`, `localhost:5432`) match this container:
 
-`DATABASE_URL=postgresql://theindex:theindex@localhost:5432/theindex`
+`cp .env.example .env`
 
 Then run:
 
 `npm run start:dev`
+
+Log in with `admin` / `admin` (the seeded ADMIN account).
 
 ----------
 
@@ -86,8 +88,17 @@ If you want to run the **built frontend and API** entirely in Docker:
 `docker compose -f docker-compose.dev.yml --profile full up -d`
 
 Open:
--   Frontend → http://localhost:4201
+-   Frontend → http://localhost:4201 (log in with `admin` / `admin`)
 -   API → http://localhost:3000
+
+The front image's own nginx only serves the app's files (in production Traefik sends `/api` to the API), so here `dev/front-nginx.conf` replaces its config: it adds the `/api` proxy to the `api` container and allows uploads up to 20 MB.
+
+### What the API container gets
+
+`docker-compose.dev.yml` sets everything the API needs, so `.env` only has to name the images (`API_IMAGE`, `FRONT_IMAGE`) and, if you like, `API_PORT` and `CORS_ORIGIN`:
+-   the database: the `db` container (`DB_HOST=db`; `localhost` would be the API container itself), with `synchronize` on;
+-   `JWT_SECRET` and the seeded admin (`admin` / `admin`), unless `.env` sets them;
+-   media in two volumes: `theindex_media` (article images, served by the API at http://localhost:3000/media-files) and `theindex_media_private` (workout PDFs, never served).
 
 ----------
 
@@ -97,7 +108,7 @@ Stop containers:
 
 `docker compose -f docker-compose.dev.yml down`
 
-Stop and **delete DB data** (⚠️ destructive):
+Stop and **delete DB data and uploaded media** (⚠️ destructive):
 
 `docker compose -f docker-compose.dev.yml down -v`
 
