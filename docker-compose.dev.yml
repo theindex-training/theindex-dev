@@ -23,24 +23,48 @@ services:
   # --- API from GHCR (frontend devs use this; backend devs can run Nest locally) ---
   api:
     image: ${API_IMAGE}
-    profiles: ["api", "full"]
+    # "front" too: the front container needs the API (compose refuses a dependency on a service
+    # that isn't in the active profile).
+    profiles: ["api", "front", "full"]
     environment:
       NODE_ENV: development
       PORT: 3000
       # Optional: allow local Angular dev server origin
       CORS_ORIGIN: ${CORS_ORIGIN}
       LOG_LEVEL: ${LOG_LEVEL}
+      # The database container, by its service name (`localhost` would be the API container).
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-theindex}
+      DB_PASS: ${DB_PASS:-theindex}
+      DB_NAME: ${DB_NAME:-theindex}
+      DB_SYNC: "true"
+      # Development values; the API refuses to start without a JWT secret.
+      JWT_SECRET: ${JWT_SECRET:-dev-super-secret-change-me}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin}
+      # Media, kept in volumes. In development the API serves the public folder itself at
+      # /media-files; the private one (workout PDFs) is never served.
+      MEDIA_STORAGE_DIR: /data/media
+      MEDIA_PUBLIC_URL: http://localhost:${API_PORT:-3000}/media-files
+      MEDIA_PRIVATE_STORAGE_DIR: /data/media-private
+    volumes:
+      - theindex_media:/data/media
+      - theindex_media_private:/data/media-private
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "${API_PORT}:3000"
+      - "${API_PORT:-3000}:3000"
     restart: unless-stopped
 
   # --- Frontend from GHCR (optional: run the built app locally via Docker) ---
   front:
     image: ${FRONT_IMAGE}
     profiles: ["front", "full"]
+    volumes:
+      # Adds the /api proxy the image's own config lacks (see the file).
+      - ./dev/front-nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - api
     ports:
@@ -49,3 +73,5 @@ services:
 
 volumes:
   theindex_pgdata:
+  theindex_media:
+  theindex_media_private:
