@@ -80,8 +80,12 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - MEDIA_STORAGE_DIR=/data/media
       - MEDIA_PUBLIC_URL=https://media.theindex.training
+      # Private media (the lesson-plan PDFs workouts are imported from): only the API reads it.
+      # Never mount theindex_media_private into `media` or any other web server.
+      - MEDIA_PRIVATE_STORAGE_DIR=/data/media-private
     volumes:
       - theindex_media:/data/media
+      - theindex_media_private:/data/media-private
     labels:
       - traefik.enable=true
 
@@ -183,4 +187,7 @@ networks:
 
 volumes:
   theindex_pgdata:
+  # Public media (article images), served read-only by `media` at media.theindex.training.
   theindex_media:
+  # Private media (workout PDFs, CrossFit's copyrighted lesson plans): mounted in `api` only.
+  theindex_media_private:

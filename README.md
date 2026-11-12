@@ -115,6 +115,16 @@ Stop and **delete DB data** (⚠️ destructive):
 
 Services: `traefik` (HTTPS, Let's Encrypt), `db`, `api`, `front` (the portal), `web` (the public site, `theindex-web`) and `media` (nginx serving the article images from the `theindex_media` volume, read-only).
 
+Volumes:
+
+| Volume | Mounted in | Holds |
+|--------|------------|-------|
+| `theindex_pgdata` | `db` | the database |
+| `theindex_media` | `api` (`/data/media`, read-write), `media` (`/srv/media`, read-only) | **public** media: article images, on the web at `media.theindex.training` |
+| `theindex_media_private` | `api` only (`/data/media-private`) | **private** media: the lesson-plan PDFs workouts are imported from (CrossFit's copyrighted material). Only the API reads them, for ADMIN and TRAINER |
+
+The API's media settings are in the `api` service: `MEDIA_STORAGE_DIR` and `MEDIA_PUBLIC_URL` (public), `MEDIA_PRIVATE_STORAGE_DIR` (private; it must be outside `MEDIA_STORAGE_DIR`, or the API refuses it). Without a setting the API still starts; only that area's requests fail (503), and a PDF import still fills the form without keeping the PDF. **Never mount `theindex_media_private` into `media` or any other web server**: everything in a served volume is public. Back up both media volumes along with the database: the rows in `media` point at their files.
+
 Hosts (compose phase B of the public site's cutover, see `docs/decision-record.md` section 11 in `theindex-web`):
 -   `theindex.training` → `web`
 -   `app.theindex.training` → `front`, with `/api` → `api` (`CORS_ORIGIN=https://app.theindex.training`)
@@ -127,6 +137,7 @@ Things to know before changing it:
 -   `media/default.conf` must exist on the VPS before `docker compose up`, or Docker creates an empty folder in its place and `media` doesn't start. Test it with `docker run --rm -v "$PWD/media/default.conf:/etc/nginx/conf.d/default.conf:ro" nginx:alpine nginx -t`.
 -   `media` mounts the volume at `/srv/media`, not nginx's default `/usr/share/nginx/html`: Docker would copy nginx's default pages into the empty volume.
 -   Never print or share `traefik/acme.json`: it holds the certificates' private keys.
+-   A new named volume is created by the next `docker compose up -d`; nothing needs to be done by hand. The `api` deploy (on every push to `main` in `theindex-api`) runs `docker compose pull && docker compose up -d` in `/opt/theindex`, so change the VPS compose file **before** merging an API change that needs a new volume or setting.
 
 Apply a change on the VPS:
 
