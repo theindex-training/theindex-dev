@@ -43,6 +43,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-super-secret-change-me}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin}
+      # "Sign in with Google": off unless .env sets a client id.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # Media, kept in volumes. In development the API serves the public folder itself at
       # /media-files; the private one (workout PDFs) is never served.
       MEDIA_STORAGE_DIR: /data/media
