@@ -98,6 +98,7 @@ The front image's own nginx only serves the app's files (in production Traefik s
 `docker-compose.dev.yml` sets everything the API needs, so `.env` only has to name the images (`API_IMAGE`, `FRONT_IMAGE`) and, if you like, `API_PORT` and `CORS_ORIGIN`:
 -   the database: the `db` container (`DB_HOST=db`; `localhost` would be the API container itself), with `synchronize` on;
 -   `JWT_SECRET` and the seeded admin (`admin` / `admin`), unless `.env` sets them;
+-   `GOOGLE_CLIENT_ID` from `.env`, if set ("Sign in with Google"; without it the login page has no Google button);
 -   media in two volumes: `theindex_media` (article images, served by the API at http://localhost:3000/media-files) and `theindex_media_private` (workout PDFs, never served).
 
 ----------
